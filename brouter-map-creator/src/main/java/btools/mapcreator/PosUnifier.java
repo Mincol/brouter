@@ -192,6 +192,17 @@ public class PosUnifier extends MapCreatorBase
         {
           System.out.println( "**** ERROR reading " + f + " ****" );
         }
+      } else {
+        int lon = ilon / 1000000 - 180;
+        int lat = ilat / 1000000 - 90;
+        String formatedLat = lat >= 0 ? String.format("N%02d", lat) : String.format("S%02d", -lat);
+        String formatedLon = lon >= 0 ? String.format("E%03d", lon) : String.format("W%03d", -lon);
+        String hgtFileName = String.format(String.format("%s%s.hgt", formatedLat, formatedLon));
+        File hgtFile= new File( new File( srtmdir ), hgtFileName);
+        if (hgtFile.exists()) {
+          System.out.println( "parsing: " + hgtFile + " ilon=" + ilon + " ilat=" + ilat );
+          lastSrtmRaster = new HgtParser(hgtFile, lon, lat).parse();
+        }
       }
       srtmmap.put( filename, lastSrtmRaster );
     }
