@@ -19,7 +19,7 @@
         <module>brouter-map-creator</module>
         <module>brouter-mem-router</module>
         <module>brouter-server</module>
-        <module>brouter-routing-app</module>
+        <!--<module>brouter-routing-app</module>-->
     </modules>
 
     <developers>
@@ -33,7 +33,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <targetJdk>1.6</targetJdk>
+        <targetJdk>1.8</targetJdk>
     </properties>
 
     <build>

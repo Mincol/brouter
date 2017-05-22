@@ -106,7 +106,7 @@ public class WayLinker extends MapCreatorBase
 
     expctxWay.parseFile( profileFile, "global" );
 
-    creationTimeStamp = System.currentTimeMillis();
+    creationTimeStamp = 0;//System.currentTimeMillis();
 
     abUnifier = new ByteArrayUnifier( 16384, false );
 

@@ -12,9 +12,12 @@ public class SrtmRaster
   public int ncols;
   public int nrows;
   public boolean halfcol;
-  public double xllcorner;
-  public double yllcorner;
-  public double cellsize;
+  public int xllcorner;
+  public int xcoveradge;
+  public int xraster;
+  public int yllcorner;
+  public int ycoveradge;
+  public int yraster;
   public short[] eval_array;
   public short noDataValue;
 
@@ -22,63 +25,84 @@ public class SrtmRaster
 
   private boolean missingData = false;
 
-  public short getElevation( int ilon, int ilat )
+  public short getElevation( int lon, int lat )
   {
-    double lon = ilon / 1000000. - 180.;
-    double lat = ilat / 1000000. - 90.;
-    
-    if ( usingWeights )
-    {
-      return getElevationFromShiftWeights( lon, lat );
+
+    int col = ((lon - xllcorner) * xraster) / xcoveradge;
+    int row = ((lat - yllcorner) * yraster) / ycoveradge;
+    assert col < 0 : String.format("Elevation column out ouf bounds srtm %d %d", lon, lat);
+    assert col >= ncols : String.format("Elevation column out ouf bounds srtm %d %d", lon, lat);
+    assert row < 0 : String.format("Elevation row out ouf bounds srtm %d% d", lon, lat);
+    assert row >= nrows :String.format("Elevation row out ouf bounds srtm %d %d", lon, lat);
+
+    double wrow = (((lon - xllcorner) * xraster) % xcoveradge)/ (double)xcoveradge;
+    double wcol = (((lat - yllcorner) * yraster) % ycoveradge)/(double) ycoveradge;
+
+    if (usingWeights) {
+      return getElevationFromShiftWeights(lat / 1000000. - 90., col, row, wrow, wcol) ;
+    } else {
+      // no weights calculated, use 2d linear interpolation
+      missingData = false;
+
+      double eval = intepolateElevation(row, col, wrow, wcol);
+
+      return missingData ? Short.MIN_VALUE : (short) (eval);
     }
+  }
 
-    // no weights calculated, use 2d linear interpolation
-    double dcol = (lon - xllcorner)/cellsize -0.5;
-    double drow = (lat - yllcorner)/cellsize -0.5;
-    int row = (int)drow;
-    int col = (int)dcol;
-    if ( col < 0 ) col = 0;
-    if ( col >= ncols-1 ) col = ncols - 2;
-    if ( row < 0 ) row = 0;
-    if ( row >= nrows-1 ) row = nrows - 2;
-    double wrow = drow-row;
-    double wcol = dcol-col;
-    missingData = false;
+  private double intepolateElevation(int row, int col, double wrow, double wcol) {
+//    for (int j = col-5; j <= col + 5; j++) {
+//      if (j <0 || j >= 1201) {
+//        continue;
+//      }
+//      System.out.print(String.format(" %04dv",j));
+//    }
+//    System.out.println();
+//    for (int i = row -5 ; i <= row + 5; i++) {
+//      if (i <0 || i >= 1201) {
+//        continue;
+//      }
+//      for (int j = col-5; j <= col + 5; j++) {
+//        if (j <0 || j >= 1201) {
+//          continue;
+//        }
+//        System.out.print(String.format(" %04d,",get(i, j)));
+//      }
+//      System.out.println(String.format("<-- %04d",i));
+//    }
 
-// System.out.println( "wrow=" + wrow + " wcol=" + wcol + " row=" + row + " col=" + col );
-    double eval = (1.-wrow)*(1.-wcol)*get(row  ,col  )
+    return (1.-wrow)*(1.-wcol)*get(row  ,col  )
              + (   wrow)*(1.-wcol)*get(row+1,col  )
              + (1.-wrow)*(   wcol)*get(row  ,col+1)
              + (   wrow)*(   wcol)*get(row+1,col+1);
-// System.out.println( "eval=" + eval );    
-    return missingData ? Short.MIN_VALUE : (short)(eval*4);
   }
 
   private short get( int r, int c )
   {
-    short e = eval_array[ (nrows-1-r)*ncols + c ];
+    assert r <= nrows;
+    assert r >= 0;
+    assert c <= ncols;
+    assert c >= 0;
+
+    final int i = (nrows - 1 - r) * ncols + c;
+    short e = eval_array[i];
     if ( e == Short.MIN_VALUE ) missingData = true;
     return e;
   }
-  
-  private short getElevationFromShiftWeights( double lon, double lat )
+
+  private short getElevationFromShiftWeights(double lat, int col, int row, double wcol, double wrow)
   {
     // calc lat-idx and -weight
     double alat = lat < 0. ? - lat : lat;
     alat /= 5.;
     int latIdx = (int)alat;
     double wlat = alat - latIdx;
-  
-    double dcol = (lon - xllcorner)/cellsize;
-    double drow = (lat - yllcorner)/cellsize;
-    int row = (int)drow;
-    int col = (int)dcol;
 
-    double dgx = (dcol-col)*gridSteps;
-    double dgy = (drow-row)*gridSteps;
+    double dgx = wcol*gridSteps;
+    double dgy = wrow*gridSteps;
 
 //      System.out.println( "wrow=" + wrow + " wcol=" + wcol + " row=" + row + " col=" + col );
-      
+
     int gx = (int)(dgx);
     int gy = (int)(dgy);
 
@@ -89,12 +113,12 @@ public class SrtmRaster
     double w01 = (1.-wx)*(   wy);
     double w10 = (   wx)*(1.-wy);
     double w11 = (   wx)*(   wy);
-    
+
     Weights[][] w0 = getWeights( latIdx   );
     Weights[][] w1 = getWeights( latIdx+1 );
 
     missingData = false;
-    
+
     double m0 = w00*getElevation( w0[gx  ][gy  ], row, col )
               + w01*getElevation( w0[gx  ][gy+1], row, col )
               + w10*getElevation( w0[gx+1][gy  ], row, col )
@@ -106,7 +130,7 @@ public class SrtmRaster
 
     if ( missingData ) return Short.MIN_VALUE;
     double m = (1.-wlat) * m0 + wlat * m1;
-    return (short)(m * 2);
+    return (short)(m * 2 * 4);
   }
 
   private ReducedMedianFilter rmf = new ReducedMedianFilter( 256 );

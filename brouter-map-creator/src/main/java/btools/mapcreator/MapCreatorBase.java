@@ -5,20 +5,15 @@
  */
 package btools.mapcreator;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.HashMap;
 
 import btools.util.DiffCoderDataOutputStream;
 
 public abstract class MapCreatorBase implements WayListener, NodeListener, RelationListener
 {
+    private static final boolean IS_OS_WINDOWS = System.getProperty("os.name").contains("Windows");
+
   private DiffCoderDataOutputStream[] tileOutStreams;
   protected File outTileDir;
 
@@ -106,7 +101,8 @@ public abstract class MapCreatorBase implements WayListener, NodeListener, Relat
 
  protected DiffCoderDataOutputStream createOutStream( File outFile ) throws IOException
  {
-   return new DiffCoderDataOutputStream( new BufferedOutputStream( new FileOutputStream( outFile ) ) );
+     final FileOutputStream fileOutputStream = new FileOutputStream(outFile);
+     return new DiffCoderDataOutputStream( IS_OS_WINDOWS ? new BufferedOutputStream( fileOutputStream, 1024 * 1024) : new BufferedOutputStream(fileOutputStream) );
  }
 
   protected DiffCoderDataOutputStream getOutStreamForTile( int tileIndex ) throws Exception
