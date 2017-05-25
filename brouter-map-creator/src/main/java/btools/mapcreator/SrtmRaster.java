@@ -30,10 +30,10 @@ public class SrtmRaster
 
     int col = ((lon - xllcorner) * xraster) / xcoveradge;
     int row = ((lat - yllcorner) * yraster) / ycoveradge;
-    assert col < 0 : String.format("Elevation column out ouf bounds srtm %d %d", lon, lat);
-    assert col >= ncols : String.format("Elevation column out ouf bounds srtm %d %d", lon, lat);
-    assert row < 0 : String.format("Elevation row out ouf bounds srtm %d% d", lon, lat);
-    assert row >= nrows :String.format("Elevation row out ouf bounds srtm %d %d", lon, lat);
+    assert 0 <= col : String.format("Column out ouf bounds srtm %d %d", lon, lat);
+    assert col <= xraster : String.format("Column out ouf bounds srtm %d %d", lon, lat);
+    assert 0  <= row : String.format("Row out ouf bounds srtm %d% d", lon, lat);
+    assert row <= yraster :String.format("Row out ouf bounds srtm %d %d", lon, lat);
 
     double wrow = (((lon - xllcorner) * xraster) % xcoveradge)/ (double)xcoveradge;
     double wcol = (((lat - yllcorner) * yraster) % ycoveradge)/(double) ycoveradge;
@@ -46,7 +46,8 @@ public class SrtmRaster
 
       double eval = intepolateElevation(row, col, wrow, wcol);
 
-      return missingData ? Short.MIN_VALUE : (short) (eval);
+      //TODO Investigate * 4
+      return missingData ? Short.MIN_VALUE : (short) (eval * 4);
     }
   }
 
