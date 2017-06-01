@@ -21,7 +21,7 @@ public class SrtmRaster
   public short[] eval_array;
   public short noDataValue;
 
-  public boolean usingWeights = false;
+  public boolean usingWeights = true;
 
   private boolean missingData = false;
 
@@ -44,38 +44,43 @@ public class SrtmRaster
       // no weights calculated, use 2d linear interpolation
       missingData = false;
 
-      double eval = intepolateElevation(row, col, wrow, wcol);
+      long elevation = intepolateElevation(row, col, wrow, wcol);
+      
+      assert elevation <= Short.MAX_VALUE : "Elevation bigger that " + Short.MAX_VALUE + "<"+elevation;
 
-      //TODO Investigate * 4
-      return missingData ? Short.MIN_VALUE : (short) (eval * 4);
+      return missingData ? Short.MIN_VALUE : (short) (elevation);
     }
   }
 
-  private double intepolateElevation(int row, int col, double wrow, double wcol) {
-//    for (int j = col-5; j <= col + 5; j++) {
-//      if (j <0 || j >= 1201) {
-//        continue;
-//      }
-//      System.out.print(String.format(" %04dv",j));
-//    }
-//    System.out.println();
-//    for (int i = row -5 ; i <= row + 5; i++) {
-//      if (i <0 || i >= 1201) {
-//        continue;
-//      }
-//      for (int j = col-5; j <= col + 5; j++) {
-//        if (j <0 || j >= 1201) {
-//          continue;
-//        }
-//        System.out.print(String.format(" %04d,",get(i, j)));
-//      }
-//      System.out.println(String.format("<-- %04d",i));
-//    }
+  private long intepolateElevation(int row, int col, double wrow, double wcol) {
+//    printElevationMap(row, col, 4);
 
-    return (1.-wrow)*(1.-wcol)*get(row  ,col  )
-             + (   wrow)*(1.-wcol)*get(row+1,col  )
-             + (1.-wrow)*(   wcol)*get(row  ,col+1)
-             + (   wrow)*(   wcol)*get(row+1,col+1);
+    return Math.round(4.*(1.-wrow)*(1.-wcol)*get(row  ,col  )
+            + 4.*(   wrow)*(1.-wcol)*get(row+1,col  )
+            + 4.*(1.-wrow)*(   wcol)*get(row  ,col+1)
+            + 4.*(   wrow)*(   wcol)*get(row+1,col+1));
+  }
+
+  private void printElevationMap(int row, int col, int vincinity) {
+    for (int j = col - vincinity; j <= col + vincinity; j++) {
+      if (j <0 || j >= ncols) {
+        continue;
+      }
+      System.out.print(String.format(" %04dv",j));
+    }
+    System.out.println();
+    for (int i = row + vincinity; i >= row - vincinity; i--) {
+      if (i <0 || i >= nrows) {
+        continue;
+      }
+      for (int j = col - vincinity; j <= col + vincinity; j++) {
+        if (j <0 || j >= ncols) {
+          continue;
+        }
+        System.out.print(String.format(" %04d,",get(i, j)));
+      }
+      System.out.println(String.format("<-- %04d",i));
+    }
   }
 
   private short get( int r, int c )
@@ -131,7 +136,7 @@ public class SrtmRaster
 
     if ( missingData ) return Short.MIN_VALUE;
     double m = (1.-wlat) * m0 + wlat * m1;
-    return (short)(m * 2 * 4);
+    return (short)(m * 4);
   }
 
   private ReducedMedianFilter rmf = new ReducedMedianFilter( 256 );
@@ -263,7 +268,7 @@ public class SrtmRaster
     int nx = ((int)rx) *2 + 3;
     int ny = ((int)ry) *2 + 3;
 
-    System.out.println( "nx="+ nx + " ny=" + ny );
+//    System.out.println( "nx="+ nx + " ny=" + ny );
     
     int mx = nx / 2; // mean pixels
     int my = ny / 2;
@@ -305,7 +310,7 @@ public class SrtmRaster
             weights.inc( x_idx, y_idx );
           }
         }
-        weights.normalize( true );
+        weights.normalize( false );
       }
     }
     return shiftWeights;

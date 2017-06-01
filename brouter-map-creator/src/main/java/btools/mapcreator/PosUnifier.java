@@ -104,7 +104,7 @@ public class PosUnifier extends MapCreatorBase {
     @Override
     public void nodeFileEnd(File nodeFile) throws Exception {
         nodesOutStream.close();
-        System.out.printf("%d of %d do not have elevation (%s %%)%n", noElevationCount, nodeCount, 100.0 * noElevationCount / nodeCount);
+        System.out.printf("%d of %d do have elevation (%s %%)%n", nodeCount - noElevationCount, nodeCount, 100.0 * (nodeCount - noElevationCount) / nodeCount);
     }
 
     private void findUniquePos(NodeData n) {
